@@ -2,6 +2,8 @@
 
 ## vNext
 
+- Add the `prometheus-client` feature and `ExporterBuilder::build_for_prometheus_client`, which exports exponential histograms as Prometheus native histograms.
+
 ## 0.33.0
 
 Released 2026-Sep-18

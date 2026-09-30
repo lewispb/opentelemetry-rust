@@ -27,16 +27,22 @@ once_cell = { workspace = true }
 opentelemetry = { workspace = true, features = ["metrics", "internal-logs"] }
 opentelemetry_sdk = { workspace = true, features = ["metrics", "experimental_metrics_custom_reader"] }
 prometheus = { version = "0.14", default-features = false }
+prometheus-client = { version = "0.25.1", optional = true }
 tracing = { workspace = true, optional = true } # optional for opentelemetry internal logging
 
 [dev-dependencies]
+opentelemetry_sdk = { workspace = true, features = ["spec_unstable_metrics_views"] }
 opentelemetry-semantic-conventions = { workspace = true }
 http-body-util = { workspace = true }
 hyper = { workspace = true, features = ["full"] }
 hyper-util = { workspace = true, features = ["full"] }
 tokio = { workspace = true, features = ["full"] }
+prometheus-client = { version = "0.25.1", features = ["prometheus_protobuf", "protobuf-protox"] }
 
 [features]
 default = ["internal-logs"]
 prometheus-encoding = []
+# Adds `ExporterBuilder::build_for_prometheus_client`, which also exports
+# exponential histograms as Prometheus native histograms.
+prometheus-client = ["dep:prometheus-client"]
 internal-logs = ["tracing"]
