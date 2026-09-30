@@ -129,10 +129,39 @@ impl ExporterBuilder {
 
     /// Creates a new [PrometheusExporter] from this configuration.
     pub fn build(self) -> Result<PrometheusExporter, opentelemetry_sdk::error::OTelSdkError> {
-        let reader = Arc::new(self.reader.build());
+        let registry = self.registry.clone().unwrap_or_default();
+        let collector = self.collector();
+        let reader = Arc::clone(&collector.reader);
 
-        let collector = Collector {
-            reader: Arc::clone(&reader),
+        registry
+            .register(Box::new(collector))
+            .map_err(|e| opentelemetry_sdk::error::OTelSdkError::InternalFailure(e.to_string()))?;
+
+        Ok(PrometheusExporter { reader })
+    }
+
+    /// Creates a new [PrometheusExporter] that registers its metrics with a
+    /// [`prometheus_client`] registry, instead of the registry set with
+    /// [ExporterBuilder::with_registry].
+    ///
+    /// Exponential histograms are exported as Prometheus native histograms.
+    /// Only the `prometheus_protobuf` encoding of `prometheus_client` contains
+    /// the native buckets. Counters always get the `_total` suffix.
+    #[cfg(feature = "prometheus-client")]
+    pub fn build_for_prometheus_client(
+        self,
+        registry: &mut prometheus_client::registry::Registry,
+    ) -> Result<PrometheusExporter, opentelemetry_sdk::error::OTelSdkError> {
+        let collector = crate::prometheus_client::ClientCollector::new(self.collector());
+        let reader = collector.reader();
+        registry.register_collector(Box::new(collector));
+
+        Ok(PrometheusExporter { reader })
+    }
+
+    fn collector(self) -> Collector {
+        Collector {
+            reader: Arc::new(self.reader.build()),
             disable_target_info: self.disable_target_info,
             without_units: self.without_units,
             without_counter_suffixes: self.without_counter_suffixes,
@@ -142,13 +171,6 @@ impl ExporterBuilder {
             inner: Mutex::new(Default::default()),
             resource_selector: self.resource_selector,
             resource_labels_once: OnceCell::new(),
-        };
-
-        let registry = self.registry.unwrap_or_default();
-        registry
-            .register(Box::new(collector))
-            .map_err(|e| opentelemetry_sdk::error::OTelSdkError::InternalFailure(e.to_string()))?;
-
-        Ok(PrometheusExporter { reader })
+        }
     }
 }

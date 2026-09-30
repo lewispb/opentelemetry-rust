@@ -126,6 +126,8 @@ const RESERVED_SCOPE_LABELS: [&str; 3] = [
 const COUNTER_SUFFIX: &str = "_total";
 
 mod config;
+#[cfg(feature = "prometheus-client")]
+mod prometheus_client;
 mod resource_selector;
 mod utils;
 
